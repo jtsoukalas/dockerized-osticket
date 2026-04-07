@@ -1551,6 +1551,47 @@ class SelectionField extends FormField {
         return $this->_list;
     }
 
+    function showExcludedChoices() {
+        // Exclusions apply anywhere this field is rendered.
+        return false;
+    }
+
+    function getExcludedChoiceValues() {
+        $config = $this->getConfiguration();
+        $raw = trim((string) $config['exclude']);
+        if (!$raw)
+            return array();
+
+        // Split by comma or newline, trim whitespace from each value
+        return array_map('trim', preg_split('/[\s,]+/', $raw, -1, PREG_SPLIT_NO_EMPTY));
+    }
+
+    function isExcludedChoiceId($id) {
+        if ($this->showExcludedChoices())
+            return false;
+
+        // You need to fetch the value associated with this ID
+        $value = $this->getChoice($id); // Or however your class retrieves a single label
+        
+        return in_array((string) $value, $this->getExcludedChoiceValues());
+    }
+
+    function filterExcludedChoices($choices) {
+        if ($this->showExcludedChoices())
+            return $choices;
+
+        $excludedValues = $this->getExcludedChoiceValues();
+
+        foreach ($choices as $id => $value) {
+            // Check if the display value is in our exclusion array
+            if (in_array((string) $value, $excludedValues)) {
+                unset($choices[$id]);
+            }
+        }
+
+        return $choices;
+    }
+
     function getWidget($widgetClass=false) {
         $config = $this->getConfiguration();
         if ($config['widget'] == 'typeahead' && $config['multiselect'] == false)
@@ -1740,6 +1781,15 @@ class SelectionField extends FormField {
                     && $entered != $entry) {
                 $this->_errors[] = __('Select a value from the list');
            }
+
+            if (!$this->errors() && $entry && is_array($entry)) {
+                foreach (array_keys($entry) as $id) {
+                    if ($this->isExcludedChoiceId($id)) {
+                        $this->_errors[] = __('Select a value from the list');
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -1789,6 +1839,14 @@ class SelectionField extends FormField {
                     'translatable'=>$this->getTranslateTag('prompt'),
                 ),
             )),
+            'exclude' => new TextboxField(array(
+                'id'=>6,
+                'label'=>__('Exclude by Value'), 
+                'required'=>false, 
+                'default'=>'',
+                'hint'=>__('Comma separated list of item names to hide (e.g., "Closed", "Archived")'),
+                'configuration'=>array('size'=>40, 'length'=>255),
+            )),
             'default' => new SelectionField(array(
                 'id'=>4, 'label'=>__('Default'), 'required'=>false, 'default'=>'',
                 'list_id'=>$this->getListId(),
@@ -1813,10 +1871,11 @@ class SelectionField extends FormField {
     function getChoices($verbose=false, $options=array()) {
         if (!$this->_choices || $verbose) {
             $choices = array();
-            foreach ($this->getList()->getItems() as $i)
+            foreach ($this->getList()->getItems() as $i) {
                 $choices[$i->getId()] = $i->getValue();
+            }
 
-            // Retired old selections
+            // Handle retired/old selections so they don't disappear from old tickets
             $values = ($a=$this->getAnswer()) ? $a->getValue() : array();
             if ($values && is_array($values)) {
                 foreach ($values as $k => $v) {
@@ -1826,14 +1885,17 @@ class SelectionField extends FormField {
                     }
                 }
             }
-
-            if ($verbose) // Don't cache
-                return $choices;
-
-            $this->_choices = $choices;
+            
+            // Cache the raw list
+            if (!$verbose) {
+                $this->_choices = $choices;
+            } else {
+                return $this->filterExcludedChoices($choices);
+            }
         }
 
-        return $this->_choices;
+        // Always filter the final output
+        return $this->filterExcludedChoices($this->_choices);
     }
 
     function getChoice($value) {
@@ -1860,10 +1922,12 @@ class SelectionField extends FormField {
             return null;
 
         if ($i = $list->getItem($value))
-            return array($i->getId() => $i->getValue());
+            if (!$this->isExcludedChoiceId($i->getId()))
+                return array($i->getId() => $i->getValue());
 
         if ($i = $list->getItem($value, true))
-            return array($i->getId() => $i->getValue());
+            if (!$this->isExcludedChoiceId($i->getId()))
+                return array($i->getId() => $i->getValue());
 
         return null;
     }

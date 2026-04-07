@@ -10,3 +10,8 @@ osTicket/upload/include/i18n/*
 
 # Ignore images and other assets
 osTicket/upload/images/*
+
+# on phar customization folder ignore verything other than extract repack
+/phar_customization*
+!/phar_customization/extract.php
+!/phar_customization/repack.php
