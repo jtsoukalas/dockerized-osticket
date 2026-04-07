@@ -1839,13 +1839,12 @@ class SelectionField extends FormField {
                     'translatable'=>$this->getTranslateTag('prompt'),
                 ),
             )),
-            'exclude' => new TextboxField(array(
+            'exclude' => new TextareaField(array(
                 'id'=>6,
                 'label'=>__('Exclude by Value'), 
                 'required'=>false, 
                 'default'=>'',
                 'hint'=>__('Comma separated list of item names to hide (e.g., "Closed", "Archived")'),
-                'configuration'=>array('size'=>40, 'length'=>255),
             )),
             'default' => new SelectionField(array(
                 'id'=>4, 'label'=>__('Default'), 'required'=>false, 'default'=>'',
