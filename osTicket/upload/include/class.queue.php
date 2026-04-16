@@ -592,6 +592,7 @@ class CustomQueue extends VerySimpleModel {
         // Standard export fields if none is provided.
         $fields = array(
                 'number' =>         __('Ticket Number'),
+                'first_message' =>  __('First Message'),
                 'created' =>        __('Date Created'),
                 'cdata__subject' =>  __('Subject'),
                 'user__name' =>      __('From'),
@@ -2302,6 +2303,38 @@ extends VerySimpleModel {
         return $this->heading;
     }
 
+    protected function getFirstMessageText($row) {
+        $ticket_id = null;
+
+        if (is_array($row) && isset($row['ticket_id'])) {
+            $ticket_id = $row['ticket_id'];
+        }
+        elseif (is_object($row) && isset($row->ticket_id)) {
+            $ticket_id = $row->ticket_id;
+        }
+
+        if (!$ticket_id)
+            return '';
+
+        $entries = ThreadEntry::objects()
+            ->filter(array('thread__ticket__ticket_id' => $ticket_id))
+            ->exclude(array('flags__hasbit' => ThreadEntry::FLAG_HIDDEN));
+
+        $message = clone $entries;
+        $message = $message
+            ->filter(array('type' => MessageThreadEntry::ENTRY_TYPE))
+            ->order_by('id')
+            ->first();
+
+        if (!$message) {
+            $message = $entries
+                ->order_by('id')
+                ->first();
+        }
+
+        return $message ? Format::html2text((string) $message->getBody()) : '';
+    }
+
     function getTranslateTag($subtag) {
         return _H(sprintf('column.%s.%s.%s', $subtag, $this->queue_id, $this->id));
     }
@@ -2383,6 +2416,9 @@ extends VerySimpleModel {
     }
 
     function from_query($row) {
+        if ($this->primary === 'first_message')
+            return $this->getFirstMessageText($row);
+
         if (!($f = $this->getField($this->primary)))
             return '';
 
