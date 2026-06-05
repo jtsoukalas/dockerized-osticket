@@ -30,6 +30,32 @@ class ListsApiController extends ApiController {
         return DynamicList::objects()->filter(array('name' => $name))->first();
     }
 
+    private function normalizeValue($raw) {
+        // Case 1: Simple array/string values [1, 2, 3]
+        if (!is_array($raw) && !is_object($raw)) {
+            return array(
+                'value' => (string) $raw,
+                'extra' => null,
+                'properties' => array(),
+            );
+        }
+
+        // Case 2: Object-based values {"project_id": 1, "head_email": "Mara"}
+        $raw = (array) $raw;
+        $projectId = isset($raw['project_id']) ? (string)$raw['project_id'] : (isset($raw['value']) ? (string)$raw['value'] : '');
+        
+        // Extract properties: exclude project_id/value to get only custom fields
+        $properties = array_filter($raw, function($key) {
+            return !in_array($key, ['project_id', 'value', 'extra']);
+        }, ARRAY_FILTER_USE_KEY);
+
+        return array(
+            'value'      => $projectId,
+            'extra'      => $projectId,
+            'properties' => $properties,
+        );
+    }
+
     function getList($format='json') {
         try {
             if (!($key = $this->requireApiKey()))
@@ -78,21 +104,43 @@ class ListsApiController extends ApiController {
             $errors = array();
 
             foreach ($data['values'] as $raw) {
-                $value = trim((string) $raw);
+                $itemData = $this->normalizeValue($raw);
+                $value = $itemData['value'];
+                $extra = $itemData['extra'];
+
                 if ($value === '') {
                     $skipped++;
                     continue;
                 }
 
-                if ($list->getItem($value)) {
+                if ($extra !== null && $list->getItem($extra, true)) {
                     $skipped++;
+                    continue;
+                }
+
+                if ($list->getItem($value)) {
+                    $item = $list->getItem($value);
+                    if ($item && !empty($itemData['properties'])) {
+                        $existing = $item->getConfiguration();
+                        $merged = array_merge($existing ?: array(), $itemData['properties']);
+                        $item->set('properties', JsonDataEncoder::encode($merged));
+                        if ($item->save())
+                            $inserted++;
+                        else
+                            $skipped++;
+                    }
+                    else {
+                        $skipped++;
+                    }
+
                     continue;
                 }
 
                 $item = $list->addItem(array(
                     'sort' => 0,
                     'value' => $value,
-                    'extra' => ''
+                    'extra' => $extra === null ? '' : $extra,
+                    'properties' => $itemData['properties'], // This is now handled inside addItem
                 ), $errors);
 
                 if ($item && $item->save()) {

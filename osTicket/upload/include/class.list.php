@@ -271,19 +271,51 @@ class DynamicList extends VerySimpleModel implements CustomList {
     }
 
     function addItem($vars, &$errors) {
-        if (($item=$this->getItem($vars['value'])))
+        if (($item = $this->getItem($vars['value'])))
             return $item;
 
-        $item = DynamicListItem::create(array(
+        $ht = array(
             'status' => 1,
             'list_id' => $this->getId(),
             'sort'  => $vars['sort'],
             'value' => $vars['value'],
             'extra' => $vars['extra']
-        ));
-        $this->_items = false;
+        );
 
-        return $item;
+        $item = DynamicListItem::create($ht);
+
+        // --- ADD PROPERTY CHECK HERE ---
+        if (!empty($vars['properties']) && is_array($vars['properties'])) {
+            $form = $this->getForm();
+            $fields = $form->getFields();
+            $data = array();
+
+            foreach ($fields as $field) {
+                $var = $field->get('var');
+                $label = $field->get('label');
+                
+                // Check if any incoming property key matches this field's Var or Label
+                foreach ($vars['properties'] as $key => $value) {
+                    if (($var !== '' && $key === $var) || (strcasecmp($key, $label) === 0)) {
+                        $data[$field->get('id')] = $value;
+                        break; 
+                    }
+                }
+            }
+            
+            // This maps the matched data into the configuration for this item
+            if (!empty($data)) {
+                $item->setConfiguration($data);
+            }
+        }
+        // --------------------------------
+
+        if ($item->save()) {
+            $this->_items = false;
+            return $item;
+        }
+
+        return null;
     }
 
     function isItemUnique($data) {
