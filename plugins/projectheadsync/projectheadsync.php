@@ -148,6 +148,11 @@ class ProjectHeadSyncService {
             $fieldListId = method_exists($field, 'getListId') ? $field->getListId() : null;
             $itemId = $this->extractSelectionItemId($answer);
 
+            if (!$this->isActiveTicketField($field)) {
+                $this->log('skipping inactive or hidden field ' . $fieldDesc);
+                continue;
+            }
+
             if ($fieldListId == $list->getId() && $itemId && ($project = DynamicListItem::lookup($itemId)))
                 $fallbackCandidates[$fieldDesc] = $project;
 
@@ -168,25 +173,34 @@ class ProjectHeadSyncService {
             }
 
             if ($project = DynamicListItem::lookup($itemId)) {
-                if (!isset($resolvedCandidates[$matchedName])) {
-                    $resolvedCandidates[$matchedName] = array(
-                        'fieldDesc' => $fieldDesc,
-                        'project' => $project,
-                        'itemId' => $itemId,
-                    );
-                }
+                $entry = $answer->getEntry();
+                $entryId = $entry ? $entry->getId() : 0;
+                $configIndex = array_search($matchedName, $fieldNames, true);
+
+                $resolvedCandidates[] = array(
+                    'fieldName' => $matchedName,
+                    'fieldDesc' => $fieldDesc,
+                    'project' => $project,
+                    'itemId' => $itemId,
+                    'entryId' => $entryId,
+                    'configIndex' => $configIndex !== false ? $configIndex : PHP_INT_MAX,
+                );
                 continue;
             }
 
             $this->log('matched field ' . $fieldDesc . ' with itemId=' . $itemId . ' but item not found');
         }
 
-        foreach ($fieldNames as $fieldName) {
-            if (isset($resolvedCandidates[$fieldName])) {
-                $candidate = $resolvedCandidates[$fieldName];
-                $this->log('resolved project ' . $candidate['project']->getId() . ' (' . $candidate['project']->getValue() . ') from configured field ' . $fieldName . ' via ' . $candidate['fieldDesc'] . ' using itemId=' . $candidate['itemId']);
-                return $candidate['project'];
-            }
+        if ($resolvedCandidates) {
+            usort($resolvedCandidates, function($a, $b) {
+                if ($a['entryId'] !== $b['entryId'])
+                    return $b['entryId'] - $a['entryId'];
+                return $a['configIndex'] - $b['configIndex'];
+            });
+
+            $candidate = $resolvedCandidates[0];
+            $this->log('resolved project ' . $candidate['project']->getId() . ' (' . $candidate['project']->getValue() . ') from configured field ' . $candidate['fieldName'] . ' via ' . $candidate['fieldDesc'] . ' using itemId=' . $candidate['itemId'] . ' entryId=' . $candidate['entryId']);
+            return $candidate['project'];
         }
 
         if ($matchedFields) {
@@ -302,8 +316,11 @@ class ProjectHeadSyncService {
             if ($candidateNorm === $configuredNorm)
                 return true;
 
-            if (str_contains($candidateNorm, $configuredNorm))
+            if (str_starts_with($candidateNorm, $configuredNorm)
+                && strlen($candidateNorm) > strlen($configuredNorm)
+                && preg_match('/^' . preg_quote($configuredNorm, '/') . '(?:_|-|\s).+$/', $candidateNorm)) {
                 return true;
+            }
         }
 
         return false;
@@ -315,6 +332,29 @@ class ProjectHeadSyncService {
                 return $fieldName;
         }
         return '';
+    }
+
+    private function isActiveTicketField($field) {
+        if (method_exists($field, 'isVisible') && !$field->isVisible())
+            return false;
+
+        if (method_exists($field, 'isEnabled') && !$field->isEnabled())
+            return false;
+
+        if (!method_exists($field, 'get'))
+            return true;
+
+        $flags = $field->get('flags');
+        if (!is_numeric($flags))
+            return true;
+
+        if (!($flags & DynamicFormField::FLAG_ENABLED))
+            return false;
+
+        if (!($flags & DynamicFormField::FLAG_AGENT_VIEW))
+            return false;
+
+        return true;
     }
 
     private function fieldDisplayName($field) {
