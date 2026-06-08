@@ -2481,7 +2481,10 @@ class CollaboratorEvent extends ThreadEvent {
             $desc = __('Collaborators for {<Organization>data.org} organization added');
             break;
         case isset($data['del']):
-            $base = __('<b>{somebody}</b> removed <strong>%s</strong> from the collaborators {timestamp}');
+            if (isset($data['former_project_head']))
+                $base = __('<b>{somebody}</b> removed project <strong>%s</strong> head <strong>%s</strong> from the collaborators {timestamp}');
+            else
+                $base = __('<b>{somebody}</b> removed <strong>%s</strong> from the collaborators {timestamp}');
             $collabs = array();
             $users = User::objects()->filter(array('id__in' => array_keys($data['del'])));
             foreach ($data['del'] as $id=>$c) {
@@ -2494,10 +2497,19 @@ class CollaboratorEvent extends ThreadEvent {
                 }
                 $collabs[] = Format::htmlchars($U ? $U->getName() : (@$c['name'] ?: $c));
             }
-            $desc = sprintf($base, implode(', ', $collabs));
+            if (isset($data['former_project_head'])) {
+                $project = Format::htmlchars(@$data['project_name'] ?: __('Unknown'));
+                $desc = sprintf($base, $project, implode(', ', $collabs));
+            }
+            else {
+                $desc = sprintf($base, implode(', ', $collabs));
+            }
             break;
         case isset($data['add']):
-            $base = __('<b>{somebody}</b> added <strong>%s</strong> as collaborators {timestamp}');
+            if (isset($data['project_head']))
+                $base = __('<b>{somebody}</b> added project <strong>%s</strong> head <strong>%s</strong> as collaborator {timestamp}');
+            else
+                $base = __('<b>{somebody}</b> added <strong>%s</strong> as collaborators {timestamp}');
             $collabs = array();
             if ($data['add']) {
                 $users = User::objects()->filter(array('id__in' => array_keys($data['add'])));
@@ -2518,9 +2530,17 @@ class CollaboratorEvent extends ThreadEvent {
                     $collabs[] = $c;
                 }
             }
-            $desc = $collabs
-                ? sprintf($base, implode(', ', $collabs))
-                : 'somebody';
+            if (isset($data['project_head'])) {
+                $project = Format::htmlchars(@$data['project_name'] ?: __('Unknown'));
+                $desc = $collabs
+                    ? sprintf($base, $project, implode(', ', $collabs))
+                    : 'somebody';
+            }
+            else {
+                $desc = $collabs
+                    ? sprintf($base, implode(', ', $collabs))
+                    : 'somebody';
+            }
             break;
         }
         return $this->template($desc, $mode);
