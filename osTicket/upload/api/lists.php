@@ -95,6 +95,9 @@ class ListsApiController extends ApiController {
             if (!isset($data['values']) || !is_array($data['values']))
                 return $this->exerr(400, 'values array required');
 
+            // Determine if we should update properties of existing items
+            $updateExisting = !empty($data['update_existing']);
+
             $list = $this->lookupList($data, $id);
             if (!$list)
                 return $this->exerr(404, 'Project list not found');
@@ -113,34 +116,35 @@ class ListsApiController extends ApiController {
                     continue;
                 }
 
+                // Skip if extra (e.g., project_id) is provided and already exists
                 if ($extra !== null && $list->getItem($extra, true)) {
                     $skipped++;
                     continue;
                 }
 
-                if ($list->getItem($value)) {
-                    $item = $list->getItem($value);
-                    if ($item && !empty($itemData['properties'])) {
+                // Handle existing items
+                if ($item = $list->getItem($value)) {
+                    if ($updateExisting && !empty($itemData['properties'])) {
                         $existing = $item->getConfiguration();
                         $merged = array_merge($existing ?: array(), $itemData['properties']);
                         $item->set('properties', JsonDataEncoder::encode($merged));
+                        
                         if ($item->save())
                             $inserted++;
                         else
                             $skipped++;
-                    }
-                    else {
+                    } else {
                         $skipped++;
                     }
-
                     continue;
                 }
 
+                // Add new item
                 $item = $list->addItem(array(
                     'sort' => 0,
                     'value' => $value,
                     'extra' => $extra === null ? '' : $extra,
-                    'properties' => $itemData['properties'], // This is now handled inside addItem
+                    'properties' => $itemData['properties'],
                 ), $errors);
 
                 if ($item && $item->save()) {
