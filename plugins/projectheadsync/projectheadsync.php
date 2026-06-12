@@ -27,6 +27,7 @@ class ProjectHeadSyncPlugin extends Plugin {
 
     function handleTicketEvent($ticket, $data=null) {
         $this->debugLog('ticket event for #' . ($ticket ? $ticket->getId() : 'unknown'));
+        $sendNotification = is_null($data);
         if (is_array($data) && isset($data['dirty']) && is_array($data['dirty']))
             $this->debugLog('model.updated dirty keys: ' . implode(', ', array_keys($data['dirty'])));
 
@@ -37,14 +38,14 @@ class ProjectHeadSyncPlugin extends Plugin {
                 $config = $instance->getConfig();
                 $this->debugLog('instance namespace=' . var_export($config->getNamespace(), true) . ' project_field_name=' . var_export($config->get('project_field_name'), true) . ' project_list=' . var_export($config->get('project_list'), true) . ' field_names=' . var_export($this->getProjectFieldNamesFromConfig($config), true));
                 $service = new ProjectHeadSyncService($config);
-                $result = $service->syncFromTicket($ticket) || $result;
+                $result = $service->syncFromTicket($ticket, $sendNotification) || $result;
             }
             return $result;
         }
 
         $this->debugLog('no active plugin instances found; falling back to current config');
         $service = new ProjectHeadSyncService($this->getConfig());
-        return $service->syncFromTicket($ticket);
+        return $service->syncFromTicket($ticket, $sendNotification);
     }
 
     private function getProjectFieldNamesFromConfig($config) {
@@ -70,9 +71,14 @@ class ProjectHeadSyncService {
         $this->config = $config;
     }
 
-    function syncFromTicket($ticket) {
+    function syncFromTicket($ticket, $sendNotification = false) {
         if (!$this->isEnabled())
             return false;
+
+        if (!$sendNotification) {
+            $this->log('skipping notification because ticket creation is not complete yet');
+            return true;
+        }
 
         if (!$ticket || !($ticket instanceof Ticket))
             return false;
@@ -107,7 +113,8 @@ class ProjectHeadSyncService {
         }
 
         $errors = array();
-        if (!$ticket->addCollaborators(array($user), array(), $errors, false)) {
+        $newCollaborators = $ticket->addCollaborators(array($user), array(), $errors, false);
+        if (!$newCollaborators) {
             if (!$errors) {
                 $this->log('collaborator ' . $user->getEmail() . ' already exists on ticket #' . $ticket->getId());
                 return true;
@@ -116,11 +123,101 @@ class ProjectHeadSyncService {
             return false;
         }
 
+        $collab = reset($newCollaborators);
+        $recipient = $collab ?: $user;
+        $recipientTicketLink = null;
+        if (is_object($recipient) && method_exists($recipient, 'getTicketLink')) {
+            $recipientTicketLink = $recipient->getTicketLink();
+        } elseif ($ticket->getOwner() && method_exists($ticket->getOwner(), 'getTicketLink')) {
+            $recipientTicketLink = $ticket->getOwner()->getTicketLink();
+        }
+
         $this->addSystemCollaboratorEvent($ticket, $user, 'add', array(
             'project_head' => true,
             'project_name' => $project->getValue(),
         ));
         $this->log('added collaborator ' . $user->getEmail() . ' to ticket #' . $ticket->getId());
+
+        // Send collaborator notification using the "New Activity Notice" template
+        try {
+            $dept = $ticket->getDept();
+            if (!$dept) {
+                $this->log('no department found for ticket #' . $ticket->getId() . '; skipping notification');
+            } elseif (!($tpl = $dept->getTemplate())) {
+                $this->log('no email template group found for dept #' . $dept->getId());
+            } elseif (!($msg = $tpl->getActivityNoticeMsgTemplate())) {
+                $this->log('no ticket activity notice template available for dept #' . $dept->getId());
+            } elseif (!($email = $dept->getEmail())) {
+                $this->log('no department email configured for dept #' . $dept->getId());
+            } else {
+                $project_head_message = sprintf('<div style="font-weight: bold; margin-bottom: 1em;">You have been added as a collaborator to this ticket as the Project %s head.</div>', htmlspecialchars($project->getValue(), ENT_QUOTES, 'UTF-8'));
+                $message_text = sprintf('You are now the Project %s head for this ticket.', htmlspecialchars($project->getValue(), ENT_QUOTES, 'UTF-8'));
+
+                $ticketOwner = $ticket->getOwner();
+                $ticketOwnerName = $ticketOwner ? $ticketOwner->getName() : '';
+                $ticketFirstMessage = '';
+                if ($ticket->getThread() && method_exists($ticket->getThread(), 'getVar')) {
+                    $original = $ticket->getThread()->getVar('original');
+                    if (is_object($original) && method_exists($original, 'display')) {
+                        $ticketFirstMessage = $original->display('email');
+                    } else {
+                        $ticketFirstMessage = (string) $original;
+                    }
+                }
+
+                $subject = $ticket->replaceVars($msg->asArray(), array(
+                    'recipient' => $recipient,
+                    'poster' => _S('SYSTEM'),
+                    'message' => $message_text,
+                    'is_project_head' => true,
+                    'project_head_role' => ', ως Επιστημονικά Υπεύθυνος/η του έργου <strong>ΚΕ' . $project->getValue() . '</strong>',
+                    'project_head_message' => $project_head_message,
+                    'signature' => ($dept && $dept->isPublic()) ? $dept->getSignature() : '',
+                    'recipient.ticket_link' => $recipientTicketLink,
+                    'ticket_owner_name' => $ticketOwnerName,
+                    'ticket_first_message' => $ticketFirstMessage,
+                ))['subj'];
+
+                $body = null;
+                $htmlTemplatePath = __DIR__ . '/emailtemplate.html';
+                if (file_exists($htmlTemplatePath) && ($template = file_get_contents($htmlTemplatePath))) {
+                    $body = $ticket->replaceVars($template, array(
+                        'recipient' => $recipient,
+                        'poster' => _S('SYSTEM'),
+                        'message' => $message_text,
+                        'is_project_head' => true,
+                        'project_head_role' => ', ως Επιστημονικά Υπεύθυνος/η του έργου <strong>ΚΕ' . $project->getValue() . '</strong>'  ,
+                        'project_head_message' => $project_head_message,
+                        'recipient.ticket_link' => $recipientTicketLink,
+                        'ticket_owner_name' => $ticketOwnerName,
+                        'ticket_first_message' => $ticketFirstMessage,
+                    ));
+                } else {
+                    $body = $ticket->replaceVars($msg->asArray(), array(
+                        'recipient' => $recipient,
+                        'poster' => _S('SYSTEM'),
+                        'message' => $message_text,
+                        'is_project_head' => true,
+                        'project_head_role' => ', ως Επιστημονικά Υπεύθυνος/η του έργου <strong>ΚΕ' . $project->getValue() . '</strong>'  ,
+                        'project_head_message' => $project_head_message,
+                        'signature' => ($dept && $dept->isPublic()) ? $dept->getSignature() : '',
+                        'recipient.ticket_link' => $recipientTicketLink,
+                        'ticket_owner_name' => $ticketOwnerName,
+                        'ticket_first_message' => $ticketFirstMessage,
+                    ))['body'];
+                }
+
+                $options = array('thread' => $ticket->getThread());
+                $sent = $email->send($recipient, $subject, $body, null, $options);
+                if ($sent) {
+                    $this->log('sent collaborator notification to ' . $recipient->getEmail() . ' for ticket #' . $ticket->getId());
+                } else {
+                    $this->log('failed to send collaborator notification to ' . $recipient->getEmail() . ' for ticket #' . $ticket->getId());
+                }
+            }
+        } catch (Exception $e) {
+            $this->log('failed to send collaborator notification: ' . $e->getMessage());
+        }
 
         return true;
     }
