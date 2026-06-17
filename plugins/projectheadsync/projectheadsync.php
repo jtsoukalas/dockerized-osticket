@@ -107,7 +107,13 @@ class ProjectHeadSyncService {
         $this->removeStaleProjectHeadCollaborators($ticket, $user, $project);
 
         $collaborators = $ticket->getCollaborators();
-        if ($collaborators && $collaborators->findFirst(array('user_id' => $user->getId()))) {
+        $suppressNotifications = (bool) $this->config->get('suppress_collaborator_notifications');
+        if ($collaborators && ($existingCollaborator = $collaborators->findFirst(array('user_id' => $user->getId())))) {
+            if ($suppressNotifications && $existingCollaborator->isActive()) {
+                $existingCollaborator->setFlag(Collaborator::FLAG_ACTIVE, false);
+                $existingCollaborator->save();
+                $this->log('marked existing collaborator ' . $user->getEmail() . ' inactive on ticket #' . $ticket->getId());
+            }
             $this->log('collaborator ' . $user->getEmail() . ' already exists on ticket #' . $ticket->getId());
             return true;
         }
@@ -124,6 +130,12 @@ class ProjectHeadSyncService {
         }
 
         $collab = reset($newCollaborators);
+        if ($suppressNotifications && $collab instanceof Collaborator) {
+            $collab->setFlag(Collaborator::FLAG_ACTIVE, false);
+            $collab->save();
+            $this->log('marked collaborator ' . $user->getEmail() . ' inactive to suppress notifications on ticket #' . $ticket->getId());
+        }
+
         $recipient = $collab ?: $user;
         $recipientTicketLink = null;
         if (is_object($recipient) && method_exists($recipient, 'getTicketLink')) {
@@ -138,6 +150,11 @@ class ProjectHeadSyncService {
         ));
         $this->log('added collaborator ' . $user->getEmail() . ' to ticket #' . $ticket->getId());
 
+        if($suppressNotifications) {
+            $project_head_future_notifications = 'Μπορείτε να παρακολουθείτε την πορεία του αιτήματος καθώς και να προσθέσετε σχόλια μέσω της πλατφόρμας, χρησιμοποιώντας τον παρακάτω σύνδεσμο.';
+        } else {
+            $project_head_future_notifications = 'Θα λαμβάνετε ενημερώσεις σχετικά με την εξέλιξη του αιτήματος. Μπορείτε να να προσθέσετε σχόλιά σας μέσω της πλατφόρμας, χρησιμοποιώντας τον παρακάτω σύνδεσμο.';
+        }
         // Send collaborator notification using the "New Activity Notice" template
         try {
             $dept = $ticket->getDept();
@@ -156,7 +173,7 @@ class ProjectHeadSyncService {
                 $ticketOwner = $ticket->getOwner();
                 $ticketOwnerName = $ticketOwner ? $ticketOwner->getName() : '';
                 $ticketFirstMessage = '';
-                if ($ticket->getThread() && method_exists($ticket->getThread(), 'getVar')) {
+                if ($sendNotification && $ticket->getThread() && method_exists($ticket->getThread(), 'getVar')) {
                     $original = $ticket->getThread()->getVar('original');
                     if (is_object($original) && method_exists($original, 'display')) {
                         $ticketFirstMessage = $original->display('email');
@@ -170,7 +187,8 @@ class ProjectHeadSyncService {
                     'poster' => _S('SYSTEM'),
                     'message' => $message_text,
                     'is_project_head' => true,
-                    'project_head_role' => ', ως Επιστημονικά Υπεύθυνος/η του έργου <strong>ΚΕ' . $project->getValue() . '</strong>',
+                    'ticket.project_head_role' => 'Προστεθήκατε αυτόματα ως Επιστημονικά Υπεύθυνος/η του έργου <strong>ΚΕ' . $project->getValue() . '</strong>.',
+                    'ticket.project_head_future_notifications' => $project_head_future_notifications,
                     'project_head_message' => $project_head_message,
                     'signature' => ($dept && $dept->isPublic()) ? $dept->getSignature() : '',
                     'recipient.ticket_link' => $recipientTicketLink,
@@ -186,7 +204,8 @@ class ProjectHeadSyncService {
                         'poster' => _S('SYSTEM'),
                         'message' => $message_text,
                         'is_project_head' => true,
-                        'project_head_role' => ', ως Επιστημονικά Υπεύθυνος/η του έργου <strong>ΚΕ' . $project->getValue() . '</strong>'  ,
+                        'ticket.project_head_role' => 'Προστεθήκατε αυτόματα ως Επιστημονικά Υπεύθυνος/η του έργου <strong>ΚΕ' . $project->getValue() . '</strong>.'  ,
+                        'ticket.project_head_future_notifications' => $project_head_future_notifications,
                         'project_head_message' => $project_head_message,
                         'recipient.ticket_link' => $recipientTicketLink,
                         'ticket_owner_name' => $ticketOwnerName,
@@ -198,7 +217,8 @@ class ProjectHeadSyncService {
                         'poster' => _S('SYSTEM'),
                         'message' => $message_text,
                         'is_project_head' => true,
-                        'project_head_role' => ', ως Επιστημονικά Υπεύθυνος/η του έργου <strong>ΚΕ' . $project->getValue() . '</strong>'  ,
+                        'ticket.project_head_role' => 'Προστεθήκατε αυτόματα ως Επιστημονικά Υπεύθυνος/η του έργου <strong>ΚΕ' . $project->getValue() . '</strong>.'  ,
+                        'ticket.project_head_future_notifications' => $project_head_future_notifications,
                         'project_head_message' => $project_head_message,
                         'signature' => ($dept && $dept->isPublic()) ? $dept->getSignature() : '',
                         'recipient.ticket_link' => $recipientTicketLink,
