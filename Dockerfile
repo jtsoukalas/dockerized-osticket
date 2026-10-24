@@ -1,4 +1,4 @@
-FROM php:8.3-apache-bookworm
+FROM php:8.3.36-apache-bookworm
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
