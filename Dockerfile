@@ -53,10 +53,14 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 # Copy PHP configuration
 COPY php.ini /usr/local/etc/php/
 
-# Create html directory but don't change ownership of mounted files
-RUN mkdir -p /var/www/html
+# Bake osTicket into the image (dev overrides this with a bind mount, see docker-compose.dev.yml)
+COPY --chown=www-data:www-data osTicket/upload/ /var/www/html/
 
-# Configure Apache to work with mounted files (read/write with www-data)
+# Keep ost-config.php on a volume so the install survives container recreation
+RUN mkdir -p /var/osticket-config \
+    && chown www-data:www-data /var/osticket-config \
+    && ln -sf /var/osticket-config/ost-config.php /var/www/html/include/ost-config.php
+
 RUN chmod 775 /var/www/html
 
 ENTRYPOINT ["docker-entrypoint.sh"]

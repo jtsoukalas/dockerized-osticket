@@ -1,0 +1,6 @@
+# Dev only: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+services:
+  web:
+    volumes:
+      # Mount local osTicket files directly for live editing
+      - ./osTicket/upload:/var/www/html

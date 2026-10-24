@@ -1,3 +1,6 @@
 .env
 .git
 node_modules
+osTicket/upload/include/ost-config.php*
+osTicket/upload/setup_disabled_*
+osTicket/upload/attachments/*

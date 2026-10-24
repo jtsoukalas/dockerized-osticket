@@ -22,8 +22,8 @@ services:
       - TZ=${TZ}
     env_file: .env
     volumes:
-      # Mount local osTicket files directly for live editing
-      - ./osTicket/upload:/var/www/html
+      # Persist the generated ost-config.php
+      - osticket_config:/var/osticket-config
       # Persist uploaded attachments
       - osticket_attachments:/var/www/html/attachments
     depends_on:
@@ -31,4 +31,5 @@ services:
 
 volumes:
   db_data:
+  osticket_config:
   osticket_attachments:

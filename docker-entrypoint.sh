@@ -19,7 +19,8 @@ if [ ! -f "$CONFIG_FILE" ] || ! grep -q "define('OSTINSTALLED',TRUE);" "$CONFIG_
     echo "osTicket not installed. Preparing for automatic installation..."
     
     # Create writable config file from sample
-    cp "$SAMPLE_FILE" "$CONFIG_FILE"
+    # cat (not cp) so it writes through the config symlink baked into the image
+    cat "$SAMPLE_FILE" > "$CONFIG_FILE"
     chmod 0666 "$CONFIG_FILE"
     
     # 4. Start Apache in background to handle the install request
