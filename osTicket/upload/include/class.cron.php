@@ -17,6 +17,8 @@
 **********************************************************************/
 //TODO: Make it DB based!
 require_once INCLUDE_DIR.'class.signal.php';
+// Registers the webhook retry queue on the 'cron' signal
+require_once INCLUDE_DIR.'class.webhook.php';
 
 class Cron {
 

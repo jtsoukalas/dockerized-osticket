@@ -2,6 +2,7 @@
 if(!defined('OSTADMININC') || !$thisstaff || !$thisstaff->isAdmin()) die('Access Denied');
 
 require_once(INCLUDE_DIR . 'class.webhook.php');
+require_once(INCLUDE_DIR . 'class.topic.php');
 
 $qs = array();
 $webhooks = array();
@@ -99,6 +100,35 @@ if ($webhook || $_REQUEST['a']=='add') {
                 <input type="number" name="timeout" value="<?php echo $info['timeout'] ?: 10; ?>" style="width: 60px;"> seconds
             </td>
         </tr>
+        <tr>
+            <td width="180"><?php echo __('Retries'); ?>:</td>
+            <td>
+                <input type="number" name="max_retries" min="0" max="10" value="<?php echo isset($info['max_retries']) ? (int)$info['max_retries'] : 3; ?>" style="width: 60px;">
+                <span class="faded"><?php echo __('Failed deliveries are retried by cron with increasing delays (1m, 5m, 15m, 1h, 6h). 0 disables retries.'); ?></span>
+            </td>
+        </tr>
+    </tbody>
+    <thead>
+        <tr>
+            <th colspan="2"><em><?php echo __('Help Topics'); ?></em></th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td width="180"><?php echo __('Only for'); ?>:</td>
+            <td>
+                <?php $selectedTopics = Webhook::parseTopicIds($info['topic_ids'] ?? []); ?>
+                <div style="max-height: 220px; overflow-y: auto; width: 450px; border: 1px solid #ccc; padding: 4px 8px; background: #fff;">
+                    <?php foreach (Topic::getHelpTopics(false, true) as $topicId => $topicName) { ?>
+                        <label style="display: block; padding: 2px 0;">
+                            <input type="checkbox" name="topic_ids[]" value="<?php echo (int)$topicId; ?>" <?php echo in_array($topicId, $selectedTopics) ? 'checked="checked"' : ''; ?>>
+                            <?php echo Format::htmlchars($topicName); ?>
+                        </label>
+                    <?php } ?>
+                </div>
+                <span class="faded"><?php echo __('Leave all unchecked to send events for all help topics.'); ?></span>
+            </td>
+        </tr>
     </tbody>
     <thead>
         <tr>
@@ -121,6 +151,10 @@ if ($webhook || $_REQUEST['a']=='add') {
         <tr>
             <td><?php echo __('Client Reply'); ?>:</td>
             <td><input type="checkbox" name="event_client_reply" value="1" <?php echo $info['event_client_reply']?'checked':''; ?>></td>
+        </tr>
+        <tr>
+            <td><?php echo __('Internal Note by Staff'); ?>:</td>
+            <td><input type="checkbox" name="event_staff_note" value="1" <?php echo $info['event_staff_note']?'checked':''; ?>></td>
         </tr>
     </tbody>
  </table>
@@ -148,18 +182,24 @@ if ($webhook || $_REQUEST['a']=='add') {
             <th width="250"><?php echo __('Name'); ?></th>
             <th width="350"><?php echo __('URL'); ?></th>
             <th><?php echo __('Active Events'); ?></th>
+            <th><?php echo __('Help Topics'); ?></th>
             <th width="80"><?php echo __('Status'); ?></th>
         </tr>
     </thead>
     <tbody>
     <?php
     if ($webhooks) {
+        $topicNames = Topic::getHelpTopics(false, true);
         foreach ($webhooks as $w) {
+            $topics = [];
+            foreach (Webhook::parseTopicIds($w['topic_ids']) as $topicId)
+                $topics[] = $topicNames[$topicId] ?? '#'.$topicId;
             $events = [];
             if ($w['event_new_ticket']) $events[] = 'New Ticket';
             if ($w['event_ticket_closed']) $events[] = 'Closed';
             if ($w['event_staff_reply']) $events[] = 'Staff Reply';
             if ($w['event_client_reply']) $events[] = 'Client Reply';
+            if ($w['event_staff_note']) $events[] = 'Staff Note';
             ?>
             <tr>
                 <td>
@@ -169,11 +209,12 @@ if ($webhook || $_REQUEST['a']=='add') {
                 </td>
                 <td><?php echo Format::htmlchars(substr($w['url'],0,50)).(strlen($w['url'])>50?'...':''); ?></td>
                 <td><?php echo implode(', ', $events); ?></td>
+                <td><?php echo $topics ? Format::htmlchars(implode(', ', $topics)) : __('All'); ?></td>
                 <td><?php echo $w['status'] ? '<span class="Active">Active</span>' : '<span class="faded">Disabled</span>'; ?></td>
             </tr>
     <?php }
     } else { ?>
-        <tr><td colspan="4"><?php echo __('No webhooks found. Click "Add New Webhook" to create one.'); ?></td></tr>
+        <tr><td colspan="5"><?php echo __('No webhooks found. Click "Add New Webhook" to create one.'); ?></td></tr>
     <?php } ?>
     </tbody>
 </table>

@@ -481,6 +481,14 @@ class ApiJsonDataParser extends JsonDataParser {
 
             } else if ($key == "attachments") {
                 foreach ($value as &$info) {
+                    // Structured format: {"name", "type", "data", "encoding"}
+                    if (is_array($info) && isset($info['name'], $info['data'])) {
+                        if (isset($info['encoding']) && !strcasecmp($info['encoding'], 'base64'))
+                            $info['data'] = base64_decode($info['data'], true);
+                        unset($info['encoding']);
+                        continue;
+                    }
+                    // Legacy format: {"filename": "data:<type>;base64,<data>"}
                     $data = reset($info);
                     # PHP5: fopen("data://$data[5:]");
                     $contents = Format::parseRfc2397($data, 'utf-8', false);

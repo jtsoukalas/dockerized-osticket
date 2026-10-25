@@ -445,10 +445,17 @@ class TicketReplyApiController extends ApiController {
                     if (isset($file['encoding']) && !strcasecmp($file['encoding'], 'base64')) {
                         $file['data'] = base64_decode($file['data'], true);
                     }
+                    if ($file['data'] === false || $file['data'] === null || $file['data'] === '')
+                        $this->exerr(400, sprintf('Attachment %s: invalid or empty data', $file['name']));
+                    // Fail the whole reply rather than post it without the file
                     try {
                         if ($F = $fileField->uploadAttachment($file))
-                            $vars['files'][] = $F->getId();
-                    } catch (Exception $ex) { continue; }
+                            // Thread code expects file info arrays, not bare ids
+                            // Keep the sent name: identical content reuses an existing file
+                            $vars['files'][] = array('id' => $F->getId(), 'name' => $file['name']);
+                    } catch (Exception $ex) {
+                        $this->exerr(400, sprintf('Attachment %s: %s', $file['name'], $ex->getMessage()));
+                    }
                 }
             }
         }
@@ -470,8 +477,8 @@ class TicketReplyApiController extends ApiController {
                 $entry = $ticket->postNote($vars, $errors, $agent);
             } else {
                 $vars['response'] = $data['message'];
-                // postResponse handles marking the ticket as 'Answered'
-                $entry = $ticket->postResponse($vars, $errors, $alert);
+                // postReply handles marking the ticket as 'Answered'
+                $entry = $ticket->postReply($vars, $errors, $alert);
             }
             
             if (!$entry) {
@@ -690,6 +697,26 @@ class TicketReplyApiController extends ApiController {
         return $this->response(200, $data);
     }
 
+    function downloadAttachment($id, $file_id) {
+        $this->requireApiKey();
+
+        $ticket = Ticket::lookupByNumber($id) ?: Ticket::lookup($id);
+        if (!$ticket)
+            $this->exerr(404, __('Ticket not found'));
+
+        // Only serve files attached to this ticket's own thread entries
+        $attachment = Attachment::objects()->filter(array(
+            'file_id' => $file_id,
+            'type' => 'H',
+            'thread_entry__thread_id' => $ticket->getThreadId(),
+        ))->first();
+        if (!$attachment || !($file = $attachment->getFile()))
+            $this->exerr(404, __('Attachment not found'));
+
+        // Sends the file (or a redirect for external storage) and exits
+        $file->download($attachment->getFilename(), 'attachment');
+    }
+
     function getList($format) {
         $this->requireApiKey();
 
@@ -775,6 +802,81 @@ class TicketReplyApiController extends ApiController {
         }
 
         return $this->response(200, $data);
+    }
+}
+
+class TicketAssignApiController extends TicketReplyApiController {
+
+    function getRequestStructure($format, $data=null) {
+        return array("staffId", "actorId", "comments", "alert");
+    }
+
+    function validate(&$data, $format, $strict=true) {
+        if (!ApiController::validate($data, $format, $strict) && $strict)
+            $this->exerr(400, __('Unexpected or invalid data received'));
+
+        if (!array_key_exists('staffId', (array)$data))
+            $this->exerr(400, __('staffId is required (0 to unassign)'));
+
+        return true;
+    }
+
+    // Change the assigned agent, e.g. hand over a ticket auto-claimed by an API user.
+    // staffId 0/null releases the agent assignment (team assignment is kept).
+    function assign($id, $format='json') {
+        $this->requireApiKey();
+
+        $ticket = Ticket::lookupByNumber($id) ?: Ticket::lookup($id);
+        if (!$ticket)
+            $this->exerr(404, __('Ticket not found'));
+
+        $data = $this->getRequest($format);
+
+        // staff_id on closed tickets means "closed by", so leave it alone
+        if ($ticket->isClosed())
+            $this->exerr(409, __('Ticket is closed'));
+
+        // Who made the change, shown in the ticket history (defaults to "API")
+        $actor = 'API';
+        if (!empty($data['actorId'])) {
+            if (!($actor = Staff::lookup($data['actorId'])))
+                $this->exerr(400, __('Unknown actorId'));
+        }
+
+        $current = $ticket->getStaff();
+        $staffId = (int)$data['staffId'];
+
+        if (!$staffId) {
+            if ($current) {
+                if (!$ticket->setStaffId(0))
+                    $this->exerr(500, __('Unable to release ticket'));
+                $ticket->logEvent('released', array(
+                    'staff' => array($current->getId(), (string)$current->getName()->getOriginal())
+                ), $actor);
+            }
+        } else {
+            if (!($staff = Staff::lookup($staffId)))
+                $this->exerr(404, __('Agent not found'));
+            if (!$staff->isAvailable())
+                $this->exerr(400, __('Agent is unavailable for assignment'));
+            if (!$ticket->getDept()->canAssign($staff))
+                $this->exerr(400, __('Agent cannot be assigned tickets in this department'));
+
+            if (!$current || $current->getId() != $staff->getId()) {
+                $alert = isset($data['alert']) ? (bool)$data['alert'] : true;
+                if (!$ticket->assignToStaff($staff, $data['comments'] ?? '', $alert, $actor))
+                    $this->exerr(500, __('Unable to assign ticket'));
+            }
+        }
+
+        $assignee = $ticket->getStaff();
+        return $this->response(200, array(
+            'ticket' => $ticket->getNumber(),
+            'assignee' => $assignee
+                ? array('id' => $assignee->getId(), 'name' => (string)$assignee->getName())
+                : null,
+            'team' => $ticket->getTeam() ? (string)$ticket->getTeam()->getName() : null,
+        ));
     }
 }
 

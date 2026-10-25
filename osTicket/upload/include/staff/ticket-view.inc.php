@@ -1160,7 +1160,7 @@ if ($errors['err'] && isset($_POST['a'])) {
                 <td>
                     <div>
                         <div class="faded" style="padding-left:0.15em"><?php
-                        echo __('Note title - summary of the note (optional)'); ?></div>
+                        echo __('Note title - summary of the note (a title alone is enough)'); ?></div>
                         <input type="text" name="title" id="title" size="60" value="<?php echo $info['title']; ?>" >
                         <br/>
                         <span class="error">&nbsp;<?php echo $errors['title']; ?></span>

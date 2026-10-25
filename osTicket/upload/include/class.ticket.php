@@ -3574,6 +3574,14 @@ implements RestrictedAccess, Threadable, Searchable {
         $type = array('type' => 'note');
         Signal::send('object.created', $this, $type);
 
+        // --- WEBHOOK MOD START ---
+        // Only agents' notes, not automatic system notes
+        if ($note->getStaffId()) {
+            require_once(INCLUDE_DIR . 'class.webhook.php');
+            WebhookManager::send('staff.note', $this, $note);
+        }
+        // --- WEBHOOK MOD END ---
+
         return $note;
     }
 

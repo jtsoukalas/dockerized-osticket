@@ -1077,12 +1077,34 @@ CREATE TABLE `%TABLE_PREFIX%webhook` (
   `method` varchar(8) NOT NULL DEFAULT 'POST',
   `headers` text,
   `timeout` int(10) unsigned NOT NULL DEFAULT '10',
+  `topic_ids` text,
+  `max_retries` tinyint(3) unsigned NOT NULL DEFAULT '3',
   `event_new_ticket` tinyint(1) unsigned NOT NULL DEFAULT '0',
   `event_ticket_closed` tinyint(1) unsigned NOT NULL DEFAULT '0',
   `event_staff_reply` tinyint(1) unsigned NOT NULL DEFAULT '0',
   `event_client_reply` tinyint(1) unsigned NOT NULL DEFAULT '0',
+  `event_staff_note` tinyint(1) unsigned NOT NULL DEFAULT '0',
   `created` datetime NOT NULL,
   `updated` datetime NOT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `status` (`status`)
+) DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `%TABLE_PREFIX%webhook_delivery`;
+CREATE TABLE `%TABLE_PREFIX%webhook_delivery` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `webhook_id` int(11) unsigned NOT NULL,
+  `event` varchar(64) NOT NULL,
+  `ticket_id` int(11) unsigned NOT NULL DEFAULT '0',
+  `payload` mediumtext NOT NULL,
+  `status` varchar(16) NOT NULL DEFAULT 'pending',
+  `attempts` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `response_code` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `last_error` varchar(255) NOT NULL DEFAULT '',
+  `next_attempt` datetime DEFAULT NULL,
+  `created` datetime NOT NULL,
+  `updated` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `status` (`status`, `next_attempt`),
+  KEY `webhook_id` (`webhook_id`)
 ) DEFAULT CHARSET=utf8;

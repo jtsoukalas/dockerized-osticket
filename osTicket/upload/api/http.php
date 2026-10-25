@@ -6,7 +6,9 @@ $dispatcher = patterns('',
     url_post("^/tickets\.(?P<format>xml|json|email)$", array('tickets.php:TicketApiController','create')),
     url_get("^/tickets/list\.(?P<format>xml|json)$", array('tickets.php:TicketReplyApiController','getList')),
     url_post("^/tickets/(?P<id>\d+)/reply(?:\.(?P<format>xml|json))?$", array('tickets.php:TicketReplyApiController','reply')),
+    url_post("^/tickets/(?P<id>\d+)/assign(?:\.(?P<format>json))?$", array('tickets.php:TicketAssignApiController','assign')),
     url_get("^/tickets/(?P<id>\d+)\.(?P<format>xml|json)$", array('tickets.php:TicketReplyApiController','get')),
+    url_get("^/tickets/(?P<id>\d+)/attachments/(?P<file_id>\d+)$", array('tickets.php:TicketReplyApiController','downloadAttachment')),
 
     // Topics
     url_get("^/tickets/topics(?:\.(?P<format>xml|json))?$", array('tickets.php:TicketReplyApiController', 'getTopics')),

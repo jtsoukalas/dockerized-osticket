@@ -3061,8 +3061,18 @@ class NoteThreadEntry extends ThreadEntry {
         //Check required params.
         if (!$vars || !is_array($vars) || !$vars['threadId'])
             $errors['err'] = __('Missing or invalid data');
-        elseif (!$vars['note'])
-            $errors['note'] = __('Note content is required');
+        else {
+            // Empty editor markup (e.g. <p><br /></p>) is not content, inline images are
+            $note = (string)$vars['note'];
+            $hasBody = trim(html_entity_decode(Format::striptags($note)), " \t\n\r\0\x0B\xC2\xA0") !== ''
+                || stripos($note, '<img') !== false;
+            if (!$hasBody)
+                $vars['note'] = '';
+
+            // A title alone is enough (e.g. short commands posted as notes)
+            if (!$hasBody && !trim((string)$vars['title']))
+                $errors['note'] = __('Note title or content is required');
+        }
 
         if ($errors) return false;
 
