@@ -28,21 +28,24 @@ docker compose logs -f
 docker compose down
 ```
 
-### Manual Installation (Non-Docker)
+### Manual Update (Non-Docker)
 
-For traditional LAMP/LEMP server deployments:
+For upgrading an existing osTicket installation on a traditional LAMP/LEMP server:
 
 1. **Make the script executable:**
 
 ```bash
-chmod +x manual-install.sh
+chmod +x manual-update.sh
 ```
 
-2. **Run the installation script as root:**
+2. **Run the update script as root:**
 
 ```bash
-sudo ./manual-install.sh
+sudo ./manual-update.sh
 ```
+
+The script prompts for the web root directory. Press Enter to use the default
+`/var/www/html`, or enter the path to an existing osTicket web root.
 
 The script will:
 - Backup your existing osTicket files (config, plugins, languages, attachments)
@@ -67,6 +70,41 @@ The script will:
 	- `osTicket/upload/`: Public webroot and PHP front-end files (index.php, login.php, tickets.php, etc.).
 - `plugins/`: Optional plugins bundled with this repo (example: `recaptchav2/`).
 - `languages/`
+
+**PHAR Plugin Customization**
+
+The `phar_customization/` scripts are used to extract and rebuild a PHAR
+plugin, using `plugins/example.phar` as the default example:
+
+1. **Extract the PHAR from the repository root:**
+
+```bash
+php phar_customization/extract.php \
+	--phar plugins/example.phar \
+	--output-dir phar_customization/example
+```
+
+The plugin files are extracted to `phar_customization/example/`. Edit the
+extracted files as needed.
+
+2. **Rebuild the PHAR from the customization directory:**
+
+```bash
+php -d phar.readonly=0 phar_customization/repack.php \
+	--input-dir phar_customization/example \
+	--output phar_customization/example.phar
+```
+
+3. **Back up the original and replace the plugin:**
+
+```bash
+cp plugins/example.phar plugins/example.phar.bak
+mv phar_customization/example.phar plugins/example.phar
+```
+
+The PHP CLI must have the Phar extension
+enabled. The `phar.readonly=0` option is required when creating the rebuilt
+archive. Restart or rebuild the osTicket container after replacing the plugin.
 
 **Configuration & Customization**
 

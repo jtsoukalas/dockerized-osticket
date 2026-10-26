@@ -1,7 +1,8 @@
 <?php
 $baseDir = dirname(__DIR__);
-$pharPath = $baseDir . '/plugins/auth-ldap.phar';
-$extractDir = __DIR__ . '/auth_ldap';
+$options = getopt('', ['phar:', 'output-dir:']);
+$pharPath = $options['phar'] ?? $baseDir . '/plugins/example.phar';
+$extractDir = $options['output-dir'] ?? __DIR__ . '/example';
 
 if (!is_file($pharPath)) {
 	fwrite(STDERR, "PHAR file not found: {$pharPath}\n");
@@ -9,6 +10,10 @@ if (!is_file($pharPath)) {
 }
 
 try {
+	if (!is_dir($extractDir) && !mkdir($extractDir, 0775, true) && !is_dir($extractDir)) {
+		throw new RuntimeException("Unable to create extraction directory: {$extractDir}");
+	}
+
 	$phar = new Phar($pharPath);
 	$phar->extractTo($extractDir, null, true);
 	echo "Extraction complete: {$extractDir}\n";
