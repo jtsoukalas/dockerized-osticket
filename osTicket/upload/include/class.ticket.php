@@ -4731,7 +4731,6 @@ implements RestrictedAccess, Threadable, Searchable {
         if ($vars['response'] && $role->hasPerm(Ticket::PERM_REPLY)) {
             $clean_response = trim(strip_tags((string)$vars['response']));
             if ($clean_response !== '') {
-                $vars['response'] = $ticket->replaceVars($vars['response']);
                 // $vars['cannedatachments'] contains the attachments placed on
                 // the response form.
                 $response = $ticket->postReply($vars, $errors, ($alert &&

@@ -79,8 +79,9 @@ if ($settings['keywords']) {
     $q = trim($settings['keywords']);
     if (is_numeric($q)) {
         $tickets->filter(array('number__startswith'=>$q));
-    } elseif (strlen($q) > 2) {
-        $tickets = $ost->searcher->find($q, $tickets);
+    } elseif (strlen($q) > 2) { //Deep search!
+        // Use the search engine to perform the search
+        $tickets = $ost->searcher->find($q, $tickets, true, ['boolean' => false]);
     }
 }
 

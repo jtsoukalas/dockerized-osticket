@@ -54,28 +54,28 @@ if (osTicket::is_ie())
         .tip_shadow { display:block !important; }
     </style>
     <![endif]-->
-    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/jquery-3.7.0.min.js?53339df"></script>
+    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/jquery-3.7.0.min.js?8d38b06"></script>
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     
     <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/quill-osticket.js?v=FIX_LAYOUT_1"></script>  
-    <link rel="stylesheet" href="<?php echo ROOT_PATH ?>css/thread.css?53339df" media="all"/>
-    <link rel="stylesheet" href="<?php echo ROOT_PATH ?>scp/css/scp.css?53339df" media="all"/>
+    <link rel="stylesheet" href="<?php echo ROOT_PATH ?>css/thread.css?8d38b06" media="all"/>
+    <link rel="stylesheet" href="<?php echo ROOT_PATH ?>scp/css/scp.css?8d38b06" media="all"/>
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/quill-modern.css?53339df" media="screen"/>
-    <link rel="stylesheet" href="<?php echo ROOT_PATH ?>css/typeahead.css?53339df" media="screen"/>
-    <link type="text/css" href="<?php echo ROOT_PATH; ?>css/ui-lightness/jquery-ui-1.13.2.custom.min.css?53339df"
+    <link rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/quill-modern.css?8d38b06" media="screen"/>
+    <link rel="stylesheet" href="<?php echo ROOT_PATH ?>css/typeahead.css?8d38b06" media="screen"/>
+    <link type="text/css" href="<?php echo ROOT_PATH; ?>css/ui-lightness/jquery-ui-1.13.2.custom.min.css?8d38b06"
          rel="stylesheet" media="screen" />
-    <link rel="stylesheet" href="<?php echo ROOT_PATH ?>css/jquery-ui-timepicker-addon.css?53339df" media="all"/>
-    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/font-awesome.min.css?53339df"/>
+    <link rel="stylesheet" href="<?php echo ROOT_PATH ?>css/jquery-ui-timepicker-addon.css?8d38b06" media="all"/>
+    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/font-awesome.min.css?8d38b06"/>
     <!--[if IE 7]>
-    <link rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/font-awesome-ie7.min.css?53339df"/>
+    <link rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/font-awesome-ie7.min.css?8d38b06"/>
     <![endif]-->
-    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH ?>scp/css/dropdown.css?53339df"/>
-    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/loadingbar.css?53339df"/>
-    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/flags.css?53339df"/>
-    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/select2.min.css?53339df"/>
-    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/rtl.css?53339df"/>
-    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH ?>scp/css/translatable.css?53339df"/>
+    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH ?>scp/css/dropdown.css?8d38b06"/>
+    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/loadingbar.css?8d38b06"/>
+    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/flags.css?8d38b06"/>
+    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/select2.min.css?8d38b06"/>
+    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/rtl.css?8d38b06"/>
+    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH ?>scp/css/translatable.css?8d38b06"/>
     <!-- Favicons -->
     <link rel="icon" type="image/png" href="<?php echo ROOT_PATH ?>images/oscar-favicon-32x32.png" sizes="32x32" />
     <link rel="icon" type="image/png" href="<?php echo ROOT_PATH ?>images/oscar-favicon-16x16.png" sizes="16x16" />

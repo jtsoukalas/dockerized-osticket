@@ -134,7 +134,7 @@ if (osTicket::is_ie())
 	<link rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/modern/base.css">
     <link rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/modern/layout.css">
     <link rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/modern/forms.css">
-    <link rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/quill-modern.css?53339df">
+    <link rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/quill-modern.css?8d38b06">
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 
     <?php if (strpos($_SERVER['SCRIPT_NAME'], 'login.php') !== false) { ?>
@@ -144,24 +144,24 @@ if (osTicket::is_ie())
     <?php } elseif (strpos($_SERVER['SCRIPT_NAME'], 'account.php') !== false) { ?>
         <link rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/modern/auth.css">
     <?php } ?>
-    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/flags.css?53339df"/>
-    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/select2.min.css?53339df"/>
-    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/font-awesome.min.css?53339df"/>
+    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/flags.css?8d38b06"/>
+    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/select2.min.css?8d38b06"/>
+    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/font-awesome.min.css?8d38b06"/>
     <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>assets/default/css/notification.css"/>
 
 
     <!-- Favicons -->
     <link rel="icon" type="image/png" href="<?php echo ROOT_PATH ?>images/oscar-favicon-32x32.png" sizes="32x32" />
     <link rel="icon" type="image/png" href="<?php echo ROOT_PATH ?>images/oscar-favicon-16x16.png" sizes="16x16" />
-    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/jquery-3.7.0.min.js?53339df"></script>
-    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/jquery-ui-1.13.2.custom.min.js?53339df"></script>
-    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/jquery-ui-timepicker-addon.js?53339df"></script>
-    <script src="<?php echo ROOT_PATH; ?>js/osticket.js?53339df"></script>
-    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/filedrop.field.js?53339df"></script>
-    <script src="<?php echo ROOT_PATH; ?>js/bootstrap-typeahead.js?53339df"></script>
+    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/jquery-3.7.0.min.js?8d38b06"></script>
+    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/jquery-ui-1.13.2.custom.min.js?8d38b06"></script>
+    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/jquery-ui-timepicker-addon.js?8d38b06"></script>
+    <script src="<?php echo ROOT_PATH; ?>js/osticket.js?8d38b06"></script>
+    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/filedrop.field.js?8d38b06"></script>
+    <script src="<?php echo ROOT_PATH; ?>js/bootstrap-typeahead.js?8d38b06"></script>
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/quill-osticket.js?53339df"></script>
-    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/select2.min.js?53339df"></script>
+    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/quill-osticket.js?8d38b06"></script>
+    <script type="text/javascript" src="<?php echo ROOT_PATH; ?>js/select2.min.js?8d38b06"></script>
     <script type="text/javascript" src="<?php echo ROOT_PATH; ?>assets/default/js/notification.js"></script>
     <?php
     if($ost && ($headers=$ost->getExtraHeaders())) {

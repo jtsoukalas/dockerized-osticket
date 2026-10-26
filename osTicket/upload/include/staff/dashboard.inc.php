@@ -3,13 +3,13 @@ $report = new OverviewReport($_POST['start'], $_POST['period']);
 $plots = $report->getPlotData();
 
 ?>
-<script type="text/javascript" src="js/raphael-min.js?53339df"></script>
-<script type="text/javascript" src="js/g.raphael.js?53339df"></script>
-<script type="text/javascript" src="js/g.line-min.js?53339df"></script>
-<script type="text/javascript" src="js/g.dot-min.js?53339df"></script>
-<script type="text/javascript" src="js/dashboard.inc.js?53339df"></script>
+<script type="text/javascript" src="js/raphael-min.js?8d38b06"></script>
+<script type="text/javascript" src="js/g.raphael.js?8d38b06"></script>
+<script type="text/javascript" src="js/g.line-min.js?8d38b06"></script>
+<script type="text/javascript" src="js/g.dot-min.js?8d38b06"></script>
+<script type="text/javascript" src="js/dashboard.inc.js?8d38b06"></script>
 
-<link rel="stylesheet" type="text/css" href="css/dashboard.css?53339df"/>
+<link rel="stylesheet" type="text/css" href="css/dashboard.css?8d38b06"/>
 
 <form method="post" action="dashboard.php">
 <div id="basic_search">

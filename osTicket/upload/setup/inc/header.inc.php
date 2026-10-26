@@ -17,8 +17,8 @@ if (osTicket::is_ie())
 <head>
     <title><?php echo $wizard['title']; ?></title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <link rel="stylesheet" href="css/wizard.css?53339df"/>
-    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/flags.css?53339df"/>
+    <link rel="stylesheet" href="css/wizard.css?8d38b06"/>
+    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/flags.css?8d38b06"/>
 </head>
 <body>
     <div id="wizard">

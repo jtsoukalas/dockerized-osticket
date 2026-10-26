@@ -53,7 +53,7 @@ $type = $entryTypes[$entry->type];
         </div>
         <div class="meta-stack">
             <div class="name-time">
-                <b><?php echo $name; ?></b>
+                <b><?php echo Format::htmlchars($name); ?></b>
                 <div class="thread-time">
                     <?php echo sprintf('<time datetime="%s" title="%s">%s</time>',
                         date(DateTime::W3C, Misc::db2gmtime($entry->created)),
