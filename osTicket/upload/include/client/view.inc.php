@@ -232,9 +232,16 @@ echo $attrs; ?>><?php echo $draft ?: $info['message'];
           
           // Check if message is empty after stripping HTML and whitespace
           const strippedContent = messageContent.replace(/<[^>]*>/g, '').trim();
-          
-          if (!strippedContent || strippedContent === '') {
+
+          // A file alone is enough, the message is optional then
+          const hasFiles = Array.from(replyForm.querySelectorAll('.filedrop .files input[type="hidden"]'))
+            .some(function(input) { return input.value; });
+
+          if ((!strippedContent || strippedContent === '') && !hasFiles) {
             e.preventDefault();
+            // Stop osticket.js from disabling the submit button and showing the overlay,
+            // otherwise the form stays stuck until a page refresh
+            e.stopImmediatePropagation();
             const popup = Notification({ position: 'top-right', duration: 5000 });
             popup.error({ 
               title: '<?php echo __('Error'); ?>',

@@ -2963,7 +2963,8 @@ class MessageThreadEntry extends ThreadEntry {
 
         if (!$vars || !is_array($vars) || !$vars['threadId'])
             $errors['err'] = __('Missing or invalid data');
-        elseif (!$vars['message'])
+        // Files without a message are stored with the empty body marker '-'
+        elseif (!$vars['message'] && !$vars['files'] && !$vars['attachments'])
             $errors['message'] = __('Message content is required');
 
         if ($errors) return false;

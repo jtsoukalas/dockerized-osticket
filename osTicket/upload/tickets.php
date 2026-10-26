@@ -79,7 +79,9 @@ if ($_POST && is_object($ticket) && $ticket->getId()) {
         $_POST['message'] = ThreadEntryBody::clean($_POST[$messageField->getFormName()]);
         
         // Validate message is not empty (check both existence and content)
-        if (!$_POST['message'] || trim(strip_tags($_POST['message'])) === '') {
+        // A file alone is enough, the message is optional then
+        if ((!$_POST['message'] || trim(strip_tags($_POST['message'])) === '')
+                && !$attachments->getFiles()) {
             $errors['message'] = __('Message required');
             $errors['err'] = __('Message cannot be empty. Please enter a message before submitting.');
         }
