@@ -3380,6 +3380,13 @@ implements RestrictedAccess, Threadable, Searchable {
 
         $dept = $this->getDept();
         $assignee = $this->getStaff();
+
+        // --- WEBHOOK MOD START ---
+        // Closing with the reply sends ticket.closed after staff.reply
+        require_once(INCLUDE_DIR . 'class.webhook.php');
+        WebhookManager::hold();
+        // --- WEBHOOK MOD END ---
+
         // Set status if new is selected
         if ($vars['reply_status_id']
                 && ($status = TicketStatus::lookup($vars['reply_status_id']))
@@ -3404,6 +3411,7 @@ implements RestrictedAccess, Threadable, Searchable {
         // --- WEBHOOK MOD START ---
         require_once(INCLUDE_DIR . 'class.webhook.php');
         WebhookManager::send('staff.reply', $this, $response);
+        WebhookManager::release();
         // --- WEBHOOK MOD END ---
 
         /* email the user??  - if disabled - then bail out */
@@ -4541,6 +4549,12 @@ implements RestrictedAccess, Threadable, Searchable {
         // Configure service-level-agreement for this ticket
         $ticket->selectSLAId($vars['slaId']);
 
+        // --- WEBHOOK MOD START ---
+        // A ticket created closed sends ticket.closed after ticket.created
+        require_once(INCLUDE_DIR . 'class.webhook.php');
+        WebhookManager::hold();
+        // --- WEBHOOK MOD END ---
+
         // Set status
         $status = TicketStatus::lookup($statusId);
         if (!$status || !$ticket->setStatus($status, false, $errors,
@@ -4628,6 +4642,7 @@ implements RestrictedAccess, Threadable, Searchable {
         require_once(INCLUDE_DIR . 'class.webhook.php');
         // We pass $ticket and $message (the initial body of the ticket)
         WebhookManager::send('ticket.created', $ticket, $message);
+        WebhookManager::release();
         // --- WEBHOOK MOD END ---
 
         return $ticket;
@@ -4677,14 +4692,32 @@ implements RestrictedAccess, Threadable, Searchable {
         // TODO: Deny action based on selected department.
         $vars['response'] = ThreadEntryBody::clean($vars['response']);
         $vars['note'] = ThreadEntryBody::clean($vars['note']);
+
+        // Files go out with the response, which needs content. Otherwise the ticket
+        // is created and the response is dropped along with its files
+        $min_reply_chars = max(1, (int)$cfg->getMinStaffReplyChars());
+        if ($vars['files']
+                && mb_strlen(trim(Format::striptags((string)$vars['response']))) < $min_reply_chars)
+            $errors['response'] = $min_reply_chars > 1
+                ? sprintf(__('Response must be at least %d characters'), $min_reply_chars)
+                : __('Response required');
+
         $create_vars = $vars;
         $tform = TicketForm::objects()->one()->getForm($create_vars);
         $mfield = $tform->getField('message');
         $create_vars['message'] = $mfield->getClean();
         $create_vars['files'] = $mfield->getWidget()->getAttachments()->getFiles();
 
-        if (!($ticket=self::create($create_vars, $errors, 'staff', false)))
+        // --- WEBHOOK MOD START ---
+        // A ticket opened closed sends ticket.closed after the response
+        require_once(INCLUDE_DIR . 'class.webhook.php');
+        WebhookManager::hold();
+        $ticket = self::create($create_vars, $errors, 'staff', false);
+        if (!$ticket) {
+            WebhookManager::release();
             return false;
+        }
+        // --- WEBHOOK MOD END ---
 
         $vars['msgId']=$ticket->getLastMsgId();
 
@@ -4705,6 +4738,10 @@ implements RestrictedAccess, Threadable, Searchable {
                             !$cfg->notifyONNewStaffTicket()));
             }
         }
+
+        // --- WEBHOOK MOD START ---
+        WebhookManager::release();
+        // --- WEBHOOK MOD END ---
 
         // Not assigned...save optional note if any, only if not empty after cleaning
         if (!$vars['assignId'] && $vars['note']) {

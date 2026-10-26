@@ -399,6 +399,7 @@ if ($_POST)
     list($draft, $attrs) = Draft::getDraftAndDataAttrs('ticket.staff.response', false, $info['response']);
     echo $attrs; ?>><?php echo ThreadEntryBody::clean($_POST ? $info['response'] : $draft);
                 ?></textarea>
+                <span class="error"><?php echo $errors['response']; ?></span>
                     <div class="attachments">
 <?php
 print $response_form->getField('attachments')->render();

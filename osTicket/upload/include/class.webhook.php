@@ -12,6 +12,10 @@ class Webhook {
     // Days to keep finished (success/failed) delivery rows
     const DELIVERY_TTL_DAYS = 30;
 
+    // Nesting depth of hold() and the ticket.closed events it held back, by ticket id
+    static $held = 0;
+    static $closed = [];
+
     function __construct($id) {
         $this->id = 0;
         $this->load($id);
@@ -121,6 +125,11 @@ class Webhook {
         if (!isset($map[$event])) return;
         $col = $map[$event];
 
+        if ($event == 'ticket.closed' && self::$held) {
+            self::$closed[$ticket->getId()] = $ticket;
+            return;
+        }
+
         // Find active webhooks for this event
         $sql = "SELECT * FROM ".TABLE_PREFIX."webhook WHERE status=1 AND `$col`=1";
         $res = db_query($sql);
@@ -147,6 +156,26 @@ class Webhook {
             $result = self::fire($row, $payload, 1);
             if (!$result['ok'])
                 self::queueRetry($row, $event, $ticket->getId(), $payload, $result);
+        }
+    }
+
+    // Holds back ticket.closed until the matching release(). Replying and closing
+    // in one action closes the ticket first, so receivers got the close before the
+    // reply (and its files)
+    static function hold() {
+        self::$held++;
+    }
+
+    static function release() {
+        if (self::$held > 0 && --self::$held > 0)
+            return;
+
+        $tickets = self::$closed;
+        self::$closed = [];
+        foreach ($tickets as $ticket) {
+            // Could be reopened meanwhile
+            if ($ticket->isClosed())
+                self::send('ticket.closed', $ticket);
         }
     }
 
@@ -355,7 +384,11 @@ class Webhook {
         self::processRetries();
     }
 }
-class WebhookManager { static function send($e, $t, $m=null) { Webhook::send($e,$t,$m); } }
+class WebhookManager {
+    static function send($e, $t, $m=null) { Webhook::send($e,$t,$m); }
+    static function hold() { Webhook::hold(); }
+    static function release() { Webhook::release(); }
+}
 
 Signal::connect('cron', array('Webhook', 'onCron'));
 ?>

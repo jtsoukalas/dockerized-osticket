@@ -700,16 +700,21 @@ class TicketReplyApiController extends ApiController {
     function downloadAttachment($id, $file_id) {
         $this->requireApiKey();
 
-        $ticket = Ticket::lookupByNumber($id) ?: Ticket::lookup($id);
-        if (!$ticket)
+        // Webhook download_url carries the ticket id, but a ticket number can be the same
+        // digits (sequential numbering), so try both instead of the first match
+        $attachment = null;
+        foreach (array_filter(array(Ticket::lookup($id), Ticket::lookupByNumber($id))) as $ticket) {
+            // Only serve files attached to this ticket's own thread entries
+            $attachment = Attachment::objects()->filter(array(
+                'file_id' => $file_id,
+                'type' => 'H',
+                'thread_entry__thread_id' => $ticket->getThreadId(),
+            ))->first();
+            if ($attachment)
+                break;
+        }
+        if (!isset($ticket))
             $this->exerr(404, __('Ticket not found'));
-
-        // Only serve files attached to this ticket's own thread entries
-        $attachment = Attachment::objects()->filter(array(
-            'file_id' => $file_id,
-            'type' => 'H',
-            'thread_entry__thread_id' => $ticket->getThreadId(),
-        ))->first();
         if (!$attachment || !($file = $attachment->getFile()))
             $this->exerr(404, __('Attachment not found'));
 
